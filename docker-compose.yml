@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: docs
+    ports: ["5432:5432"]
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - "9000:9000"
+    volumes:
+      - minio-data:/data
+  
+  app:
+    build: .
+    command: npm run start:dev
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+      - minio
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/docs
+      S3_ENDPOINT: minio
+      S3_PORT: 9000
+      S3_ACCESS_KEY: minio
+      S3_SECRET_KEY: minio123
+      S3_BUCKET: documents
+      S3_USE_SSL: false
+      OPEN_ROUTER_API_KEY: sk-<your-key>
+
+volumes:
+  db-data:
+  minio-data:
