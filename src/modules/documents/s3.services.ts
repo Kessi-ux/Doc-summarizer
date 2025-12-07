@@ -45,7 +45,9 @@ export class S3Service {
       const url = `${protocol}://${endpoint}:${port}/${this.bucket}/${encodeURIComponent(key)}`;
       return { key, url };
     } catch (err) {
+      console.error('S3 upload error:', err);
       throw new InternalServerErrorException('Failed to upload file to S3/MinIO');
     }
   }
 }
+

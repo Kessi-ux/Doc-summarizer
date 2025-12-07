@@ -1,11 +1,12 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import axios from 'axios';
+import { GoogleGenerativeAI, GenerationConfig } from '@google/generative-ai';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
 
 @Injectable()
 export class LlmService {
-  private endpoint = 'https://openrouter.ai/api/v1/chat/completions';
-  private apiKey = process.env.OPEN_ROUTER_API_KEY;
-
+  private apiKey = process.env.GEMINI_API_KEY;
   private systemPrompt = `
 You are a document analysis assistant. Respond STRICTLY with a single JSON object (no surrounding text) with keys:
 {
@@ -24,28 +25,33 @@ If you cannot find a field, return an empty string for it.
 
   async analyze(text: string): Promise<{ summary: string; docType: string; metadata: any }> {
     try {
-      const prompt = [
-        { role: 'system', content: this.systemPrompt },
-        { role: 'user', content: text.slice(0, 50000) } // safety cut
-      ];
+      if (!this.apiKey) {
+        throw new Error('GEMINI_API_KEY not defined in .env');
+      }
 
-      const resp = await axios.post(this.endpoint, {
-        model: 'gpt-4o-mini',
-        messages: prompt,
-        max_tokens: 800,
-        temperature: 0.0,
-      }, {
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        timeout: 120000,
+      const genAI = new GoogleGenerativeAI(this.apiKey);
+      const generationConfig: GenerationConfig = {
+        responseMimeType: 'application/json',
+      };
+
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-2.5-flash', 
+        generationConfig,
       });
 
-      // The API may return choices -> message.content
-      const content = resp.data?.choices?.[0]?.message?.content ?? resp.data?.choices?.[0]?.text ?? '';
+      const prompt = `
+          ${this.systemPrompt}
 
-      // Try safe JSON parse, else attempt to extract JSON substring
+      Text to process:
+      """
+      ${text.slice(0, 50000)}
+      """
+      `;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const content = await response.text();
+
       let parsed;
       try {
         parsed = JSON.parse(content);
@@ -61,7 +67,6 @@ If you cannot find a field, return an empty string for it.
       }
 
       if (!parsed) {
-        // fallback minimal structure
         return { summary: '', docType: 'other', metadata: {} };
       }
 
@@ -71,6 +76,7 @@ If you cannot find a field, return an empty string for it.
         metadata: parsed.metadata ?? {},
       };
     } catch (err) {
+      console.error('Error in LLM analysis:', err);
       throw new InternalServerErrorException('LLM analysis failed');
     }
   }

@@ -10,7 +10,7 @@ A NestJS-based service that allows users to upload PDF or DOCX documents, extrac
 - Store raw files in S3/MinIO
 - Extract text using `pdf-parse` and `mammoth`
 - Optional OCR support for scanned PDFs (Tesseract.js)
-- Analyze documents with OpenRouter LLM (e.g., GPT-4o-mini)
+- Analyze documents with OpenRouter LLM (e.g., Gemimi-2.5-flash)
 - Returns summary, document type, and metadata
 - REST API endpoints with NestJS
 

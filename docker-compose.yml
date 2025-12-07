@@ -10,19 +10,22 @@ services:
       - db-data:/var/lib/postgresql/data
 
   minio:
+    container_name: minio
     image: minio/minio
-    command: server /data
+    command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: minio123
     ports:
-      - "9000:9000"
+      - "9000:9000" # API
+      - "9001:9001"   # WebUI
     volumes:
       - minio-data:/data
   
   app:
     build: .
     command: npm run start:dev
+    container_name: doc-summarizer-app
     ports:
       - "3000:3000"
     depends_on:
@@ -36,7 +39,8 @@ services:
       S3_SECRET_KEY: minio123
       S3_BUCKET: documents
       S3_USE_SSL: false
-      OPEN_ROUTER_API_KEY: sk-<your-key>
+      GEMINI_API_KEY: ${GEMINI_API_KEY}           
+      GEMINI_MODEL: gemini-2.5-flash
 
 volumes:
   db-data:

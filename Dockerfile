@@ -1,6 +1,12 @@
 # Use Node 20 Alpine
 FROM node:20-alpine
 
+# Fix TLS issues
+RUN npm config set strict-ssl false
+
+# Add Poppler for PDF extraction
+RUN apk add --no-cache poppler-utils
+
 # Set working directory
 WORKDIR /app
 
@@ -8,10 +14,13 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci
+RUN npm install
 
 # Copy all source files
 COPY . .
+
+# Generate prisma client FOR LINUX
+RUN npx prisma generate
 
 # Build TypeScript if using NestJS
 RUN npm run build
